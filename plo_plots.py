@@ -1,5 +1,5 @@
 from performance import fast_actDCF, ece, rocch_pava, cllr, sigmoid, optimal_llr_from_Popt, optimal_llr
-from numpy import linspace, log, vstack, minimum, repeat, flipud, exp, zeros, isinf, infty
+from numpy import linspace, log, vstack, minimum, maximum, repeat, flipud, exp, zeros, isinf, infty, abs
 from tikzplotlib import save as tikz_save
 from os.path import split as path_split
 from copy import deepcopy as copy
@@ -340,17 +340,24 @@ class PriorLogOddsPlots(object):
 
         :return: integral between default and minimum ECE profiles
         """
-        def int_ece(x):
-            # see Z(X) function in our paper; here for x as LLRs
-            idx = (~isinf(x)) & (x != 0)
-            contrib = zeros(len(x))
-            contrib[x == infty] = 0.25
+
+        def int_ece(x, epsilon=1e-6):
+            """
+            Z(X) = avg( [(x-3)*(x-1) + 2*log(x)] / [4 * (x-1)^2] )  # x as LR
+                 = avg( 0.25 - 1/[2*(x-1)] + log(x)/[2*(x-1)^2] )  # a = log(x)
+                 = 0.25 + 0.5 * avg( - 1/[(exp(a) - 1)] + a/[(exp(a)-1)^2] )  # b = exp(a)-1
+                 = 0.25 + 0.5 * avg( (a-b))/b^2 )
+            """
+            idx = (~isinf(x)) & (abs(x) > epsilon)
+            contrib = zeros(len(x))  # for +inf, the contribution is 0.25; the later on constant term
             xx = x[idx]
-            LR = exp(xx)
-            contrib[idx] = (LR**2 - 4*LR + 2*xx + 3) / (4*(LR - 1)**2)
             LRm1 = exp(xx) - 1
-            contrib[idx] = 0.25 - 1/(2*LRm1) + xx / (2*LRm1**2)
-            return contrib.mean()
+            contrib[idx] = (xx - LRm1) / LRm1 ** 2
+            # if x == 0 or if x < epsilon
+            # numerical issue of exp() function for small values around zero, thus also hardcoded value
+            contrib[(abs(x) < epsilon)] = -0.5  # Z(0) = 0 = 0.25 + (-0.5)/2
+            return 0.25 + contrib.mean() / 2
 
         int_diff_ece = int_ece(self.classA_llr) + int_ece(-self.classB_llr)
         return int_diff_ece / log(2)
+
