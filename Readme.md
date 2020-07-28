@@ -9,7 +9,7 @@ Disclaimer - this toolkit is a standalone implementation of our paper
 
 Nautsch, Patino, Tomashenko, Yamagishi, Noe, Bonastre, Todisco and Evans:
 "The Privacy ZEBRA: Zero Evidence Biometric Recognition Assessment"
-submitted to Interspeech 2020
+in Proc. Interspeech 2020
 ```
 [[Online] pre-print](https://arxiv.org/pdf/2005.09413.pdf)
 

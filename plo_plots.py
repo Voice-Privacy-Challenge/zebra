@@ -355,7 +355,7 @@ class PriorLogOddsPlots(object):
             contrib[idx] = (xx - LRm1) / LRm1 ** 2
             # if x == 0 or if x < epsilon
             # numerical issue of exp() function for small values around zero, thus also hardcoded value
-            contrib[(abs(x) < epsilon)] = -0.5  # Z(0) = 0 = 0.25 + (-0.5)/2
+            contrib[(abs(x) <= epsilon)] = -0.5  # Z(0) = 0 = 0.25 + (-0.5)/2
             return 0.25 + contrib.mean() / 2
 
         int_diff_ece = int_ece(self.classA_llr) + int_ece(-self.classB_llr)
