@@ -169,7 +169,7 @@ for dataset in scr_files.dataset.unique():
             export_zebra_framework_plots(plo_plot=zebra_plot, filename=fname, save_plot_ext='png')
             mpl.close(zebra_plot.ece_fig)
 
-            title_strings.append(condition_label)
+            # title_strings.append(condition_label)
             filename_strings.append(fname)
 
 # Example for sorting legend
