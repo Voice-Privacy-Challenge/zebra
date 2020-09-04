@@ -54,6 +54,7 @@ def read_kaldi_folder_structure(glob_cmd):
     scr_files_ds.loc[protected_enrol_test.index, 'task'] = 'a-a'
     team_sys = score_glob.str.split(sep, expand=True).iloc[:, 1:3]
     scr_files_ds['label'] = team_sys[1] + '-' + team_sys[2]
+    scr_files_ds['key'] = scr_files_ds['scr'].str.replace('exp/.*/(.*)/.*', r'data/\1/trials', regex=True)
 
     return scr_files_ds
 

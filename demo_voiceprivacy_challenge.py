@@ -37,9 +37,7 @@ zebra_plot = PriorLogOddsPlots()
 for idx in range(len(scr_files)):
     # load scores
     scr = read_csv(scr_files.scr[idx], sep=' ', header=None).pivot_table(index=0, columns=1, values=2)
-    key_path = 'keys-voiceprivacy-2020' + sep + '_'.join((scr_files.dataset[idx], 'test', 'trials', scr_files.gender[idx]))
-    if 'a' in scr_files.task[idx]:
-        key_path += '_anon'
+    key_path = scr_files.key[idx]
     key = read_csv(key_path, sep=' ', header=None).replace('nontarget', False).replace('target', True).pivot_table(index=0, columns=1, values=2)
     classA_scores = scr.values[key.values == True]
     classB_scores = scr.values[key.values == False]
@@ -103,13 +101,10 @@ for system in systems:
     for gender in scr_files.gender.unique():
         for dataset in scr_files.dataset.unique():
             for task in scr_files.task.unique():
-                key = 'keys-voiceprivacy-2020' + sep + '_'.join((dataset, 'test', 'trials', gender))
-                if 'a' in task:
-                    key += '_anon'
-
                 condition_label = '-'.join((dataset, task, gender))
                 scr_selection = scr_files[(scr_files.gender == gender) & (scr_files.dataset == dataset) & (scr_files.task == task)]
                 for idx, scr in scr_selection.iterrows():
+                    key = scr_files.key[idx]
                     zebra_framework(plo_plot=zebra_plot, scr_path=scr.scr, key_path=key, label=condition_label, color_min=cmap_tab20[color_idx % len(cmap_tab20)])
                     color_idx += 1
 
