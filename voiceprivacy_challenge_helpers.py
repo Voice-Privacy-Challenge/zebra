@@ -20,27 +20,29 @@ def read_kaldi_folder_structure(glob_cmd):
     :return: scr_files: pandas.DataFrame object with meta-information: gender, dataset, task, label tailored to the 2020 VoicePrivacy challenge
     """
     score_glob = Series(glob(glob_cmd))
+    score_glob = score_glob.drop(score_glob[score_glob.str.contains('dev_enrolls')].index)
+    score_glob = score_glob.drop(score_glob[score_glob.str.contains('dev_trials')].index)
+    score_glob = score_glob.reset_index(drop=True)
     score_files = score_glob.str.split(sep, expand=True)
+    
+    anon_identifier = Series(glob('exp/*/ASR-libri*test_asr_*')).str.split('test_asr_', expand=True)
+    for i, anon in enumerate(anon_identifier[1]):
+        score_files[2] = score_files[2].str.replace(anon, 'anon')
 
-    results_identifier = score_files[3].str.split('_', expand=True).iloc[:, 1:].apply(lambda x: '_'.join(filter(None, x)), axis=1)
-    if not results_identifier.isna().all():
-        for idx in argwhere(results_identifier.str.len().values > 0).squeeze():
-            score_files.iloc[idx, 4] = score_files.iloc[idx, 4].replace(results_identifier[idx], 'anon')
-
-    score_files_tmp = score_files[4].str.split('-', expand=True)
-    score_files_tmp2 = score_files[5]
-    score_files.drop(columns=[4, 5], inplace=True)
+    score_files_tmp = score_files[2].str.split('-', expand=True)
+    score_files_tmp2 = score_files[3]
+    score_files.drop(columns=[2, 3], inplace=True)
     for i in range(len(score_files_tmp.columns)):
-        score_files.insert(loc=4+score_files_tmp.columns[i], column=4+score_files_tmp.columns[i], value=score_files_tmp[i].values)
+        score_files.insert(loc=2+score_files_tmp.columns[i], column=2+score_files_tmp.columns[i], value=score_files_tmp[i].values)
     score_files.insert(loc=len(score_files.columns), column=len(score_files.columns), value=score_files_tmp2.values)
 
     # establish flags
-    protected_enrol_test = Series(score_glob[score_files.loc[:, 5].str.contains('anon')])
-    protected_test = Series(score_glob[score_files.loc[:, 6].str.contains('anon')]).drop(index=protected_enrol_test.index)
+    protected_enrol_test = Series(score_glob[score_files.loc[:, 3].str.contains('anon')])
+    protected_test = Series(score_glob[score_files.loc[:, 4].str.contains('anon')]).drop(index=protected_enrol_test.index)
     # original = Series(score_glob).drop(index=protected_enrol_test.index).drop(index=protected_test.index)
-    flag_gender = score_files.loc[:, 6].str.contains('_f')
-    flag_libri = score_files.loc[:, 6].str.contains('libri')
-    flag_vctk_common = score_files.loc[:, 6].str.contains('common')
+    flag_gender = score_files.loc[:, 4].str.contains('_f')
+    flag_libri = score_files.loc[:, 4].str.contains('libri')
+    flag_vctk_common = score_files.loc[:, 4].str.contains('common')
 
     # extract score paths with boolean meta information
     scr_files_ds = DataFrame({'scr': score_glob})
@@ -52,8 +54,10 @@ def read_kaldi_folder_structure(glob_cmd):
     scr_files_ds['task'] = 'o-o'
     scr_files_ds.loc[protected_test.index, 'task'] = 'o-a'
     scr_files_ds.loc[protected_enrol_test.index, 'task'] = 'a-a'
-    team_sys = score_glob.str.split(sep, expand=True).iloc[:, 1:3]
-    scr_files_ds['label'] = team_sys[1] + '-' + team_sys[2]
+    scr_files_ds['label'] = score_glob.str.split(sep, expand=True).iloc[:, 1]
+    scr_files_ds['key'] = 'data/vctk_test_trials_' + scr_files_ds['gender'] + '/trials'
+    scr_files_ds.loc[flag_libri, 'key'] = 'data/libri_test_trials_' + scr_files_ds['gender'] + '/trials'
+    scr_files_ds.loc[flag_vctk_common, 'key'] = 'data/vctk_test_trials_' + scr_files_ds['gender'] + '_common/trials'
 
     return scr_files_ds
 

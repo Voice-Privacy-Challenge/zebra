@@ -1,5 +1,5 @@
 from zebra import PriorLogOddsPlots, zebra_framework, export_zebra_framework_plots, cmap_tab20, categorical_tags, cat_ranges, zebra_plots_sorted_legend
-from helpers import read_kaldi_folder_structure, place_legend
+from voiceprivacy_challenge_helpers import read_kaldi_folder_structure, place_legend
 from numpy import log, inf, hstack, argwhere
 from pandas import DataFrame, read_csv
 import matplotlib.pyplot as mpl
@@ -18,7 +18,7 @@ __license__ = "LGPLv3"
 
 
 # read score files
-scr_files = read_kaldi_folder_structure(glob_cmd='exp' + sep + '*' + sep + '*' + sep + '*' + sep + '*test*' + sep + 'scores')
+scr_files = read_kaldi_folder_structure(glob_cmd='exp' + sep + '*' + sep + '*test*' + sep + 'scores')
 
 # compute metrics: ROCCH-EER, Cllr & min Cllr
 challenge_results = DataFrame({
@@ -37,9 +37,7 @@ zebra_plot = PriorLogOddsPlots()
 for idx in range(len(scr_files)):
     # load scores
     scr = read_csv(scr_files.scr[idx], sep=' ', header=None).pivot_table(index=0, columns=1, values=2)
-    key_path = 'keys-voiceprivacy-2020' + sep + '_'.join((scr_files.dataset[idx], 'test', 'trials', scr_files.gender[idx]))
-    if 'a' in scr_files.task[idx]:
-        key_path += '_anon'
+    key_path = scr_files.key[idx]
     key = read_csv(key_path, sep=' ', header=None).replace('nontarget', False).replace('target', True).pivot_table(index=0, columns=1, values=2)
     classA_scores = scr.values[key.values == True]
     classB_scores = scr.values[key.values == False]
@@ -84,14 +82,11 @@ with open('voiceprivacy-challenge-2020' + sep + 'results.md', "w") as text_file:
 
 
 # To compare __one__ system in __multiple__ conditions
-team = 'Baseline'
-systems = ['primary', 'contrastive']
 dece_values = []
 title_strings = []
 zebra_objects = []
 filename_strings = []
-for system in systems:
-    scr_files = read_kaldi_folder_structure(glob_cmd='exp' + sep + team + sep + system + sep + '*' + sep + '*test*' + sep + 'scores')
+for system in scr_files.label.unique():
     zebra_plot = PriorLogOddsPlots()
 
     dece_values.append([])
@@ -103,13 +98,10 @@ for system in systems:
     for gender in scr_files.gender.unique():
         for dataset in scr_files.dataset.unique():
             for task in scr_files.task.unique():
-                key = 'keys-voiceprivacy-2020' + sep + '_'.join((dataset, 'test', 'trials', gender))
-                if 'a' in task:
-                    key += '_anon'
-
                 condition_label = '-'.join((dataset, task, gender))
-                scr_selection = scr_files[(scr_files.gender == gender) & (scr_files.dataset == dataset) & (scr_files.task == task)]
+                scr_selection = scr_files[(scr_files.label == system) & (scr_files.gender == gender) & (scr_files.dataset == dataset) & (scr_files.task == task)]
                 for idx, scr in scr_selection.iterrows():
+                    key = scr_files.key[idx]
                     zebra_framework(plo_plot=zebra_plot, scr_path=scr.scr, key_path=key, label=condition_label, color_min=cmap_tab20[color_idx % len(cmap_tab20)])
                     color_idx += 1
 
@@ -117,7 +109,7 @@ for system in systems:
                     dece_handle.append(zebra_plot.get_delta_ECE())
                     zebra_handle.append(deepcopy(zebra_plot))
 
-    title = team + ': ' + system
+    title = system
     mpl.title(title)
     fname = 'voiceprivacy-challenge-2020' + sep + 'multiple_conditions' + '_' + system
     export_zebra_framework_plots(plo_plot=zebra_plot, filename=fname, save_plot_ext='png', legend_loc=partial(place_legend, shrink=1.3))
@@ -130,8 +122,6 @@ for system in systems:
 zebra_plots_sorted_legend(dece_values, zebra_objects, title_strings, filename_strings, legend_loc=partial(place_legend, shrink=1.3))
 
 # To compare __multiple__ systems in __one__ condition (automation for all)
-scr_files = read_kaldi_folder_structure(glob_cmd='exp' + sep + '*' + sep + '*' + sep + '*' + sep + '*test*' + sep + 'scores')
-
 dece_values = []
 title_strings = []
 zebra_objects = []
@@ -147,15 +137,12 @@ for dataset in scr_files.dataset.unique():
             zebra_objects.append([])
             zebra_handle = zebra_objects[-1]
 
-            key = 'keys-voiceprivacy-2020' + sep + '_'.join((dataset, 'test', 'trials', gender))
-            if 'a' in task:
-                key += '_anon'
-
             condition_label = '-'.join((dataset, task, gender))
             scr_selection = scr_files[(scr_files.gender == gender) & (scr_files.dataset == dataset) & (scr_files.task == task)]
             color_idx = 0
 
             for idx, scr in scr_selection.iterrows():
+                key = scr_files.key[idx]
                 zebra_framework(plo_plot=zebra_plot, scr_path=scr.scr, key_path=key, label=scr.label, color_min=cmap_tab20[color_idx % len(cmap_tab20)])
                 color_idx += 1
 
@@ -166,12 +153,12 @@ for dataset in scr_files.dataset.unique():
             mpl.title(condition_label)
             title_strings.append(condition_label)
             fname = 'voiceprivacy-challenge-2020' + sep + 'task_wise_' + condition_label
-            export_zebra_framework_plots(plo_plot=zebra_plot, filename=fname, save_plot_ext='png')
+            export_zebra_framework_plots(plo_plot=zebra_plot, filename=fname, save_plot_ext='png', legend_loc=partial(place_legend, shrink=1.3))
             mpl.close(zebra_plot.ece_fig)
 
             # title_strings.append(condition_label)
             filename_strings.append(fname)
 
 # Example for sorting legend
-zebra_plots_sorted_legend(dece_values, zebra_objects, title_strings, filename_strings)
+zebra_plots_sorted_legend(dece_values, zebra_objects, title_strings, filename_strings, legend_loc=partial(place_legend, shrink=1.3))
 
